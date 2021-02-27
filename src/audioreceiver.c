@@ -35,67 +35,46 @@ main (int argc, char *argv[])
 {
 	int usetestsource=0;
 	int c, index;
+	int port=6000;
 	opterr = 0;
 	
-	while ((c = getopt (argc, argv, "t")) != -1)
+	while ((c = getopt (argc, argv, "hp:")) != -1)
 	switch (c)
 	{
-	case 't':
-		usetestsource = 1;
+	case 'p':
+		port = atoi(optarg);
 		break;
 	case 'h':
-		fprintf(stderr,"Usage: -t use test source.\n");
+		fprintf(stderr,"audioreceiver \n");
+		fprintf(stderr,"Usage: -p [port] set receiving port\n");
 		return 1;
 	break;
 		default:
 		break;
 	}
-	
-	
-	/* 	gst-launch-1.0 udpsrc \
-		caps="application/x-rtp,media=(string)audio,clock-rate=(int)48000,encoding-name=(string)X-GST-OPUS-DRAFT-SPITTKA-00" \
-		port=6000 \
-		! rtpopusdepay ! opusdec plc=true ! pulsesink sync=false
-		* 
-		* 
-		* application/x-rtp, media=(string)audio, payload=(int)[ 96, 127 ], clock-rate=(int)48000, encoding-params=(string)2, encoding-name=(string){ OPUS, X-GST-OPUS-DRAFT-SPITTKA-00 }
-		* 
-		* 
-		* 
-		* GstCaps *caps = gst_caps_new_simple( ....);
-		g_object_set(source, "caps", caps, NULL);
-		gst_caps_unref(caps);
-		* 
-		* 
-	*/
-	
 	/* Initialize gstreamer */
-	 
 	GstElement *pipeline, *udpsource,*rtpopusdepay,*opusdecoder, *pulsesink;
 	GstCaps *filtercaps;
 	GstBus *bus;
 	GstMessage *msg;
 	GstStateChangeReturn ret;
 	gst_init (&argc, &argv);
-
 	/* caps */
 	GstElement *capsfilter = gst_element_factory_make("capsfilter", NULL);
 	GstCaps *caps = gst_caps_from_string ("application/x-rtp,media=(string)audio,payload=(int)[ 96, 127 ],clock-rate=(int)48000,encoding-name=(string){OPUS,X-GST-OPUS-DRAFT-SPITTKA-00}");
 	g_object_set (capsfilter, "caps", caps, NULL);
-	
-
 	/* udpsource */
 	udpsource = gst_element_factory_make ("udpsrc", NULL);
-	g_object_set(G_OBJECT(udpsource), "port", 6000, NULL);
+	g_object_set(G_OBJECT(udpsource), "port", port, NULL);
 	g_object_set(G_OBJECT(udpsource), "caps", caps , NULL);
-	
+	/* unref caps */
 	gst_caps_unref(caps);
-	
 	/* rtpopusdepay */	
 	rtpopusdepay = gst_element_factory_make ("rtpopusdepay", NULL);
 	/* Opus decoder */
 	opusdecoder = gst_element_factory_make ("opusdec", NULL);
 	g_object_set (G_OBJECT ( opusdecoder ), "plc", TRUE, NULL);
+	g_object_set (G_OBJECT ( opusdecoder ), "use-inband-fec", TRUE, NULL);  
 	/* pulsesink */
 	pulsesink = gst_element_factory_make ("pulsesink", NULL);
 	if (pulsesink == NULL)
@@ -117,10 +96,10 @@ main (int argc, char *argv[])
 		return -1;
 	}
 
-	/* Build the pipeline */
-	gst_bin_add_many (GST_BIN (pipeline),udpsource,capsfilter,rtpopusdepay,opusdecoder,pulsesink, NULL);
+	/* Build the pipeline (capsfilter before rptopusdepay?) */
+	gst_bin_add_many (GST_BIN (pipeline),udpsource,rtpopusdepay,opusdecoder,pulsesink, NULL);
 
-	if ( gst_element_link_many (udpsource,capsfilter,rtpopusdepay,opusdecoder,pulsesink,NULL) != TRUE) {
+	if ( gst_element_link_many (udpsource,rtpopusdepay,opusdecoder,pulsesink,NULL) != TRUE) {
 		g_printerr ("Elements could not be linked.\n");
 		gst_object_unref (pipeline);
 		return -1;

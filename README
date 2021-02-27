@@ -3,6 +3,10 @@ audioreceiver - audio stream receiving utility
 Small utility to get opus stream from udpsink and play it back to
 pulsesink. This example is based on gstreamer examples.
 
+# audioreceiver -h
+audioreceiver 
+Usage: -p [port] set receiving port
+
 Functionality
 
 audio_in -> audiostreamer -> audioreceiver -> audio_out
