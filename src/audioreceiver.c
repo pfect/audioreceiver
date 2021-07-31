@@ -36,17 +36,28 @@ main (int argc, char *argv[])
 	int usetestsource=0;
 	int c, index;
 	int port=6000;
+	char *srcip=NULL;
+	char *audiosink=NULL;
 	opterr = 0;
 	
-	while ((c = getopt (argc, argv, "hp:")) != -1)
+	while ((c = getopt (argc, argv, "hp:a:s:")) != -1)
 	switch (c)
 	{
 	case 'p':
 		port = atoi(optarg);
 		break;
+	case 'a':
+	    srcip = optarg;
+	    break;
+	case 's':
+	    audiosink = optarg;
+	    break;
 	case 'h':
 		fprintf(stderr,"audioreceiver \n");
 		fprintf(stderr,"Usage: -p [port] set receiving port\n");
+		fprintf(stderr,"       -a [address] listen address \n");
+		fprintf(stderr,"       -s [sink] audio sink: pulsesink (default), alsasink \n\n");
+		fprintf(stderr,"       default: 0.0.0.0:6000\n\n");
 		return 1;
 	break;
 		default:
@@ -67,6 +78,14 @@ main (int argc, char *argv[])
 	udpsource = gst_element_factory_make ("udpsrc", NULL);
 	g_object_set(G_OBJECT(udpsource), "port", port, NULL);
 	g_object_set(G_OBJECT(udpsource), "caps", caps , NULL);
+	
+	/* destination ip & port */
+	if ( srcip == NULL ) {
+		g_object_set(G_OBJECT(udpsource), "address", "0.0.0.0", NULL);
+	} else {
+		g_object_set(G_OBJECT(udpsource), "address", srcip, NULL);
+	}
+	
 	/* unref caps */
 	gst_caps_unref(caps);
 	/* rtpopusdepay */	
@@ -76,9 +95,16 @@ main (int argc, char *argv[])
 	g_object_set (G_OBJECT ( opusdecoder ), "plc", TRUE, NULL);
 	g_object_set (G_OBJECT ( opusdecoder ), "use-inband-fec", TRUE, NULL);  
 	/* pulsesink */
-	pulsesink = gst_element_factory_make ("pulsesink", NULL);
+	if ( audiosink == NULL ) {
+		pulsesink = gst_element_factory_make ("pulsesink", NULL);
+	} else {
+		pulsesink = gst_element_factory_make (audiosink, NULL);
+	}
+	
 	if (pulsesink == NULL)
 		g_error ("Could not create udpsink");
+		
+		
 	g_object_set(G_OBJECT(pulsesink), "sync", FALSE, NULL);
 	
 	pipeline = gst_pipeline_new ("test-pipeline");
