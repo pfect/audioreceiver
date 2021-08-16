@@ -1,4 +1,2 @@
-src/audioreceiver
-src/*.o
-src/.deps/*.Po
-src/.deps
+audioreceiver
+*.o
